@@ -59,7 +59,7 @@ export function registerRoutes(app: Express) {
         db
           .select({
             vintage: wines.vintage,
-            count: db.fn.count(wines.id),
+            count: sql`count(${wines.id})`,
           })
           .from(wines)
           .groupBy(wines.vintage)
@@ -67,7 +67,7 @@ export function registerRoutes(app: Express) {
         db
           .select({
             region: wines.region,
-            count: db.fn.count(wines.id),
+            count: sql`count(${wines.id})`,
           })
           .from(wines)
           .groupBy(wines.region)

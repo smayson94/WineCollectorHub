@@ -42,7 +42,18 @@ import {
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
 
-interface WineWithReviews extends Wine {
+// Extend from Wine type to include all base properties
+interface WineWithReviews {
+  id: number;
+  binId: number;
+  name: string;
+  vintage: number;
+  region: string;
+  variety: string;
+  producer: string;
+  drinkFrom: number | null;
+  drinkTo: number | null;
+  createdAt: string;
   reviews?: Review[];
   bin?: Bin;
 }
@@ -51,7 +62,7 @@ export default function WineTable() {
   const [search, setSearch] = useState("");
   const [filterRegion, setFilterRegion] = useState<string>("");
   const [isWineDialogOpen, setIsWineDialogOpen] = useState(false);
-  const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
+  const [selectedWine, setSelectedWine] = useState<typeof wines[number] | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -128,7 +139,7 @@ export default function WineTable() {
     return Array.from(new Set(wines.map((wine) => wine.region))).sort();
   }, [wines]);
 
-  const handleEditWine = (wine: Wine) => {
+  const handleEditWine = (wine: typeof wines[number]) => {
     setSelectedWine(wine);
     setIsWineDialogOpen(true);
   };
@@ -241,11 +252,14 @@ export default function WineTable() {
       </div>
 
       <Dialog open={isWineDialogOpen} onOpenChange={setIsWineDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px]" aria-describedby="wine-form-description">
           <DialogHeader>
             <DialogTitle>
               {selectedWine ? "Edit Wine" : "Add New Wine"}
             </DialogTitle>
+            <p id="wine-form-description" className="text-sm text-muted-foreground">
+              {selectedWine ? "Update the details of your wine." : "Add a new wine to your collection."}
+            </p>
           </DialogHeader>
           <WineForm
             bins={bins || []}

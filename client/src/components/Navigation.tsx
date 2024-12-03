@@ -10,11 +10,9 @@ export default function Navigation() {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <Link href="/">
-              <a className="flex items-center space-x-2">
-                <Wine className="h-6 w-6 text-primary" />
-                <span className="font-semibold text-xl">Wine Collector</span>
-              </a>
+            <Link href="/" className="flex items-center space-x-2">
+              <Wine className="h-6 w-6 text-primary" />
+              <span className="font-semibold text-xl">Wine Collector</span>
             </Link>
             <div className="flex space-x-4">
               <Button
