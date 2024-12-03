@@ -9,6 +9,7 @@ import Navigation from "./components/Navigation";
 import Home from "./pages/Home";
 import Bins from "./pages/Bins";
 import Analytics from "./pages/Analytics";
+import Wines from "./pages/Wines";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/bins" component={Bins} />
+          <Route path="/wines" component={Wines} />
           <Route path="/analytics" component={Analytics} />
           <Route>404 Page Not Found</Route>
         </Switch>

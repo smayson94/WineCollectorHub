@@ -36,7 +36,7 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Wine,
+  Wine as WineIcon,
   Search,
   Filter,
 } from "lucide-react";
@@ -288,7 +288,10 @@ export default function WineTable() {
                 });
               }
             }}
-            defaultValues={selectedWine || undefined}
+            defaultValues={selectedWine ? {
+              ...selectedWine,
+              createdAt: new Date(selectedWine.createdAt)
+            } : undefined}
           />
         </DialogContent>
       </Dialog>

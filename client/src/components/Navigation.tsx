@@ -25,6 +25,15 @@ export default function Navigation() {
                 </Link>
               </Button>
               <Button
+                variant={location === "/wines" ? "secondary" : "ghost"}
+                asChild
+              >
+                <Link href="/wines">
+                  <Wine className="mr-2 h-4 w-4" />
+                  Wines
+                </Link>
+              </Button>
+              <Button
                 variant={location === "/analytics" ? "secondary" : "ghost"}
                 asChild
               >
