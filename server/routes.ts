@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { db } from "db";
 import { bins, wines, reviews } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
   // Bins

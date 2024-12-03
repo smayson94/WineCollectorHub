@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import BinCard from "../components/BinCard";
+import BinForm from "../components/BinForm";
 import type { Bin, InsertBin } from "@db/schema";
 
 export default function Bins() {
@@ -70,11 +71,23 @@ export default function Bins() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Add New Storage Bin</DialogTitle>
           </DialogHeader>
-          {/* Add bin form here */}
+          <BinForm
+            onSubmit={async (data) => {
+              try {
+                await createBin.mutateAsync(data);
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to create bin",
+                  variant: "destructive",
+                });
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

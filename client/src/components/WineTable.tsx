@@ -62,7 +62,7 @@ export default function WineTable() {
   const [search, setSearch] = useState("");
   const [filterRegion, setFilterRegion] = useState<string>("");
   const [isWineDialogOpen, setIsWineDialogOpen] = useState(false);
-  const [selectedWine, setSelectedWine] = useState<typeof wines[number] | null>(null);
+  const [selectedWine, setSelectedWine] = useState<WineWithReviews | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -139,7 +139,7 @@ export default function WineTable() {
     return Array.from(new Set(wines.map((wine) => wine.region))).sort();
   }, [wines]);
 
-  const handleEditWine = (wine: typeof wines[number]) => {
+  const handleEditWine = (wine: WineWithReviews) => {
     setSelectedWine(wine);
     setIsWineDialogOpen(true);
   };
