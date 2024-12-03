@@ -119,7 +119,7 @@ export default function WineTable() {
     return wines.filter((wine) => {
       const matchesSearch = wine.name.toLowerCase().includes(search.toLowerCase()) ||
         wine.producer.toLowerCase().includes(search.toLowerCase());
-      const matchesRegion = !filterRegion || filterRegion === "all" || wine.region === filterRegion;
+      const matchesRegion = !filterRegion || filterRegion === "all_regions" || wine.region === filterRegion;
       return matchesSearch && matchesRegion;
     });
   }, [wines, search, filterRegion]);
@@ -176,7 +176,7 @@ export default function WineTable() {
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All regions</SelectItem>
+            <SelectItem value="all_regions">All regions</SelectItem>
             {uniqueRegions.map((region) => (
               <SelectItem key={region} value={region}>
                 {region}
