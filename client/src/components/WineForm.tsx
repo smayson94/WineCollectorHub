@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image } from "lucide-react";
+import { Image, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface WineFormProps {
   onSubmit: (data: InsertWine) => void;
@@ -41,6 +43,9 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
     },
   });
 
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
+
   return (
     <Form {...form}>
       <form onSubmit={async (e) => {
@@ -49,6 +54,16 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
         const imageFile = formData.get('image') as File;
         
         if (imageFile && imageFile.size > 0) {
+          if (imageFile.size > 5 * 1024 * 1024) {
+            toast({
+              title: "Error",
+              description: "Image file size must be less than 5MB",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          setIsUploading(true);
           const uploadFormData = new FormData();
           uploadFormData.append('image', imageFile);
           
@@ -66,7 +81,14 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
             form.setValue('imageUrl', imageUrl);
           } catch (error) {
             console.error('Image upload error:', error);
+            toast({
+              title: "Error",
+              description: "Failed to upload image. Please try again.",
+              variant: "destructive",
+            });
             return;
+          } finally {
+            setIsUploading(false);
           }
         }
         
@@ -266,8 +288,15 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
           )}
         />
 
-        <Button type="submit" className="w-full">
-          Save Wine
+        <Button type="submit" className="w-full" disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            "Save Wine"
+          )}
         </Button>
       </form>
     </Form>

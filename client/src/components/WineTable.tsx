@@ -176,7 +176,7 @@ export default function WineTable() {
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">All regions</SelectItem>
+            <SelectItem value="">All regions</SelectItem>
             {uniqueRegions.map((region) => (
               <SelectItem key={region} value={region}>
                 {region}
