@@ -147,8 +147,16 @@ export default function WineTable() {
   if (isLoading) return <div>Loading...</div>;
 
   return (
-    <div className="space-y-4">
+    <div id="wine-table" className="space-y-4">
       <div className="flex items-center gap-4">
+        <Button
+          data-add-wine-trigger
+          onClick={() => setIsWineDialogOpen(true)}
+          className="mr-4"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Wine
+        </Button>
         <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
