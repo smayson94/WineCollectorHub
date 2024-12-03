@@ -43,6 +43,27 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.put("/api/wines/:id", async (req, res) => {
+    try {
+      const wine = await db.update(wines)
+        .set(req.body)
+        .where(eq(wines.id, parseInt(req.params.id)))
+        .returning();
+      res.json(wine[0]);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update wine" });
+    }
+  });
+
+  app.delete("/api/wines/:id", async (req, res) => {
+    try {
+      await db.delete(wines).where(eq(wines.id, parseInt(req.params.id)));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete wine" });
+    }
+  });
+
   // Reviews
   app.post("/api/reviews", async (req, res) => {
     try {

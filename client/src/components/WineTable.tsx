@@ -269,6 +269,15 @@ export default function WineTable() {
             <WineForm
               bins={bins}
               onSubmit={async (data) => {
+                if (!data.binId) {
+                  toast({
+                    title: "Error",
+                    description: "Please select a storage bin",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
                 try {
                   const response = await fetch(
                     selectedWine ? `/api/wines/${selectedWine.id}` : "/api/wines",
@@ -278,7 +287,12 @@ export default function WineTable() {
                       body: JSON.stringify(data),
                     }
                   );
-                  if (!response.ok) throw new Error("Failed to save wine");
+                  
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || "Failed to save wine");
+                  }
+                  
                   queryClient.invalidateQueries({ queryKey: ["wines"] });
                   setIsWineDialogOpen(false);
                   toast({
@@ -286,9 +300,10 @@ export default function WineTable() {
                     description: `Wine ${selectedWine ? "updated" : "added"} successfully`,
                   });
                 } catch (error) {
+                  console.error("Wine save error:", error);
                   toast({
                     title: "Error",
-                    description: "Failed to save wine",
+                    description: error instanceof Error ? error.message : "Failed to save wine",
                     variant: "destructive",
                   });
                 }
