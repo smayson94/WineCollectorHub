@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Image } from "lucide-react";
 
 interface WineFormProps {
   onSubmit: (data: InsertWine) => void;
@@ -42,7 +43,35 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-describedby="form-description">
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const imageFile = formData.get('image') as File;
+        
+        if (imageFile && imageFile.size > 0) {
+          const uploadFormData = new FormData();
+          uploadFormData.append('image', imageFile);
+          
+          try {
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to upload image');
+            }
+            
+            const { imageUrl } = await response.json();
+            form.setValue('imageUrl', imageUrl);
+          } catch (error) {
+            console.error('Image upload error:', error);
+            return;
+          }
+        }
+        
+        form.handleSubmit(onSubmit)(e);
+      }} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="binId"
@@ -185,6 +214,57 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Wine Label Image</FormLabel>
+              <FormControl>
+                <div className="space-y-4">
+                  {field.value && (
+                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
+                      <img
+                        src={field.value}
+                        alt="Wine Label"
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center w-full">
+                    <label htmlFor="image-upload" className="w-full">
+                      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
+                        <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload wine label image
+                        </p>
+                      </div>
+                      <input
+                        id="image-upload"
+                        name="image"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              field.onChange(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="w-full">
           Save Wine

@@ -21,6 +21,7 @@ export const wines = pgTable("wines", {
   producer: text("producer").notNull(),
   drinkFrom: integer("drink_from"),
   drinkTo: integer("drink_to"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
