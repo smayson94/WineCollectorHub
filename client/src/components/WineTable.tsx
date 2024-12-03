@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import {
   Table,
   TableBody,
@@ -42,31 +43,19 @@ import {
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
 
-// Extend from Wine type to include all base properties
-interface WineWithReviews {
-  id: number;
-  binId: number;
-  name: string;
-  vintage: number;
-  region: string;
-  variety: string;
-  producer: string;
-  drinkFrom: number | null;
-  drinkTo: number | null;
-  createdAt: string;
+interface WineWithReviews extends Wine {
   reviews?: Review[];
   bin?: Bin;
 }
 
 export default function WineTable() {
   const [search, setSearch] = useState("");
-  const [filterRegion, setFilterRegion] = useState<string>("");
+  const [filterRegion, setFilterRegion] = useState<string | null>(null);
   const [isWineDialogOpen, setIsWineDialogOpen] = useState(false);
   const [selectedWine, setSelectedWine] = useState<WineWithReviews | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch wines with their reviews and bin information
   const { data: wines, isLoading } = useQuery<WineWithReviews[]>({
     queryKey: ["wines"],
     queryFn: async () => {
@@ -76,7 +65,6 @@ export default function WineTable() {
     },
   });
 
-  // Fetch bins for the wine form
   const { data: bins } = useQuery<Bin[]>({
     queryKey: ["bins"],
     queryFn: async () => {
@@ -110,7 +98,7 @@ export default function WineTable() {
         body: JSON.stringify({
           wineId,
           rating,
-          notes: "", // Optional notes could be added in a more detailed review form
+          notes: "",
         }),
       });
       if (!response.ok) throw new Error("Failed to add review");
@@ -172,13 +160,13 @@ export default function WineTable() {
             />
           </div>
         </div>
-        <Select value={filterRegion} onValueChange={setFilterRegion}>
+        <Select value={filterRegion || undefined} onValueChange={setFilterRegion}>
           <SelectTrigger className="w-[180px]">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All regions</SelectItem>
+            <SelectItem value="_all">All regions</SelectItem>
             {uniqueRegions.map((region) => (
               <SelectItem key={region} value={region}>
                 {region}
@@ -203,6 +191,14 @@ export default function WineTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filteredWines.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8">
+                  <WineIcon className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No wines in your collection yet.</p>
+                </TableCell>
+              </TableRow>
+            )}
             {filteredWines.map((wine) => (
               <TableRow key={wine.id}>
                 <TableCell className="font-medium">{wine.name}</TableCell>
@@ -261,38 +257,48 @@ export default function WineTable() {
               {selectedWine ? "Update the details of your wine." : "Add a new wine to your collection."}
             </p>
           </DialogHeader>
-          <WineForm
-            bins={bins || []}
-            onSubmit={async (data) => {
-              try {
-                const response = await fetch(
-                  selectedWine ? `/api/wines/${selectedWine.id}` : "/api/wines",
-                  {
-                    method: selectedWine ? "PUT" : "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data),
-                  }
-                );
-                if (!response.ok) throw new Error("Failed to save wine");
-                queryClient.invalidateQueries({ queryKey: ["wines"] });
-                setIsWineDialogOpen(false);
-                toast({
-                  title: "Success",
-                  description: `Wine ${selectedWine ? "updated" : "added"} successfully`,
-                });
-              } catch (error) {
-                toast({
-                  title: "Error",
-                  description: "Failed to save wine",
-                  variant: "destructive",
-                });
-              }
-            }}
-            defaultValues={selectedWine ? {
-              ...selectedWine,
-              createdAt: new Date(selectedWine.createdAt)
-            } : undefined}
-          />
+          {(!bins || bins.length === 0) ? (
+            <div className="text-center py-6">
+              <WineIcon className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground mb-4">Please create a storage bin first before adding wines.</p>
+              <Button asChild>
+                <Link href="/bins">Create Storage Bin</Link>
+              </Button>
+            </div>
+          ) : (
+            <WineForm
+              bins={bins}
+              onSubmit={async (data) => {
+                try {
+                  const response = await fetch(
+                    selectedWine ? `/api/wines/${selectedWine.id}` : "/api/wines",
+                    {
+                      method: selectedWine ? "PUT" : "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(data),
+                    }
+                  );
+                  if (!response.ok) throw new Error("Failed to save wine");
+                  queryClient.invalidateQueries({ queryKey: ["wines"] });
+                  setIsWineDialogOpen(false);
+                  toast({
+                    title: "Success",
+                    description: `Wine ${selectedWine ? "updated" : "added"} successfully`,
+                  });
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to save wine",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              defaultValues={selectedWine ? {
+                ...selectedWine,
+                createdAt: new Date(selectedWine.createdAt)
+              } : undefined}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -70,7 +70,7 @@ export default function BinForm({ onSubmit, defaultValues }: BinFormProps) {
                 <Input 
                   type="number" 
                   {...field} 
-                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
                 />
               </FormControl>
               <FormMessage />
@@ -85,7 +85,11 @@ export default function BinForm({ onSubmit, defaultValues }: BinFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea {...field} placeholder="Optional description of the storage bin" />
+                <Textarea 
+                  {...field} 
+                  value={field.value || ''} 
+                  placeholder="Optional description of the storage bin" 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

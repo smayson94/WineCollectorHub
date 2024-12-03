@@ -35,8 +35,8 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
       region: "",
       variety: "",
       producer: "",
-      drinkFrom: undefined,
-      drinkTo: undefined,
+      drinkFrom: null,
+      drinkTo: null,
     },
   });
 
@@ -93,7 +93,11 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
               <FormItem>
                 <FormLabel>Vintage</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number"
+                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -151,7 +155,11 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
               <FormItem>
                 <FormLabel>Drink From</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number"
+                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -165,7 +173,11 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
               <FormItem>
                 <FormLabel>Drink To</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number"
+                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
