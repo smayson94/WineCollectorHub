@@ -18,9 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 
 interface WineFormProps {
   onSubmit: (data: InsertWine) => void;
@@ -43,57 +40,9 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
     },
   });
 
-  const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
-
   return (
     <Form {...form}>
-      <form onSubmit={async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const imageFile = formData.get('image') as File;
-        
-        if (imageFile && imageFile.size > 0) {
-          if (imageFile.size > 5 * 1024 * 1024) {
-            toast({
-              title: "Error",
-              description: "Image file size must be less than 5MB",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          setIsUploading(true);
-          const uploadFormData = new FormData();
-          uploadFormData.append('image', imageFile);
-          
-          try {
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              body: uploadFormData,
-            });
-            
-            if (!response.ok) {
-              throw new Error('Failed to upload image');
-            }
-            
-            const { imageUrl } = await response.json();
-            form.setValue('imageUrl', imageUrl);
-          } catch (error) {
-            console.error('Image upload error:', error);
-            toast({
-              title: "Error",
-              description: "Failed to upload image. Please try again.",
-              variant: "destructive",
-            });
-            return;
-          } finally {
-            setIsUploading(false);
-          }
-        }
-        
-        form.handleSubmit(onSubmit)(e);
-      }} className="space-y-6" aria-describedby="form-description">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="binId"
@@ -237,66 +186,8 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="imageUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Wine Label Image</FormLabel>
-              <FormControl>
-                <div className="space-y-4">
-                  {field.value && (
-                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
-                      <img
-                        src={field.value}
-                        alt="Wine Label"
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center justify-center w-full">
-                    <label htmlFor="image-upload" className="w-full">
-                      <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
-                        <Image className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Click to upload wine label image
-                        </p>
-                      </div>
-                      <input
-                        id="image-upload"
-                        name="image"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              field.onChange(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" className="w-full" disabled={isUploading}>
-          {isUploading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            "Save Wine"
-          )}
+        <Button type="submit" className="w-full">
+          Save Wine
         </Button>
       </form>
     </Form>

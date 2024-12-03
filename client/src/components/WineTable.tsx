@@ -40,8 +40,7 @@ import {
   Wine as WineIcon,
   Search,
   Filter,
-  Plus,
-  Image
+  Plus
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
 
@@ -176,7 +175,7 @@ export default function WineTable() {
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All regions</SelectItem>
+            <SelectItem value="_all">All regions</SelectItem>
             {uniqueRegions.map((region) => (
               <SelectItem key={region} value={region}>
                 {region}
@@ -190,7 +189,6 @@ export default function WineTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Label</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Vintage</TableHead>
               <TableHead>Producer</TableHead>
@@ -204,7 +202,7 @@ export default function WineTable() {
           <TableBody>
             {filteredWines.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <WineIcon className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No wines in your collection yet.</p>
                 </TableCell>
@@ -212,21 +210,6 @@ export default function WineTable() {
             )}
             {filteredWines.map((wine) => (
               <TableRow key={wine.id}>
-                <TableCell>
-                  {wine.imageUrl ? (
-                    <div className="relative w-12 h-16 rounded overflow-hidden">
-                      <img
-                        src={wine.imageUrl}
-                        alt={`${wine.name} label`}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-12 h-16 rounded bg-muted flex items-center justify-center">
-                      <Image className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </TableCell>
                 <TableCell className="font-medium">{wine.name}</TableCell>
                 <TableCell>{wine.vintage}</TableCell>
                 <TableCell>{wine.producer}</TableCell>
