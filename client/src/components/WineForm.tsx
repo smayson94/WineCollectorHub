@@ -43,41 +43,35 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
 
   return (
     <Form {...form}>
-      <form 
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          const imageFile = formData.get('image') as File;
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const imageFile = formData.get('image') as File;
+        
+        if (imageFile && imageFile.size > 0) {
+          const uploadFormData = new FormData();
+          uploadFormData.append('image', imageFile);
           
-          if (imageFile && imageFile.size > 0) {
-            const uploadFormData = new FormData();
-            uploadFormData.append('image', imageFile);
+          try {
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            });
             
-            try {
-              const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: uploadFormData,
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to upload image');
-              }
-              
-              const { imageUrl } = await response.json();
-              form.setValue('imageUrl', imageUrl);
-            } catch (error) {
-              console.error('Image upload error:', error);
-              return;
+            if (!response.ok) {
+              throw new Error('Failed to upload image');
             }
+            
+            const { imageUrl } = await response.json();
+            form.setValue('imageUrl', imageUrl);
+          } catch (error) {
+            console.error('Image upload error:', error);
+            return;
           }
-          
-          form.handleSubmit(onSubmit)(e);
-        }} 
-        className="space-y-6" 
-        aria-describedby="wine-form-description">
-        <p id="wine-form-description" className="text-sm text-muted-foreground">
-          Enter the details for your new wine.
-        </p>
+        }
+        
+        form.handleSubmit(onSubmit)(e);
+      }} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="binId"
@@ -85,8 +79,8 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
             <FormItem>
               <FormLabel>Storage Bin</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
-                value={field.value?.toString() || undefined}
+                onValueChange={(value) => field.onChange(parseInt(value))}
+                defaultValue={field.value?.toString()}
                 aria-label="Select storage bin"
               >
                 <FormControl>
