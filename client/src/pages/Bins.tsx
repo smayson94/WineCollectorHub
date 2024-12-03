@@ -71,9 +71,12 @@ export default function Bins() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px]" aria-describedby="form-description">
           <DialogHeader>
             <DialogTitle>Add New Storage Bin</DialogTitle>
+            <p id="form-description" className="text-sm text-muted-foreground">
+              Enter the details for your new storage bin.
+            </p>
           </DialogHeader>
           <BinForm
             onSubmit={async (data) => {

@@ -31,7 +31,7 @@ export default function BinForm({ onSubmit, defaultValues }: BinFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="name"
@@ -39,7 +39,7 @@ export default function BinForm({ onSubmit, defaultValues }: BinFormProps) {
             <FormItem>
               <FormLabel>Bin Name</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="e.g., Cellar A" />
+                <Input {...field} placeholder="e.g., Cellar A" aria-label="Enter bin name" />
               </FormControl>
               <FormMessage />
             </FormItem>

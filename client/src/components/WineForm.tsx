@@ -42,7 +42,7 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="binId"
@@ -52,6 +52,7 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
               <Select
                 onValueChange={(value) => field.onChange(parseInt(value))}
                 defaultValue={field.value?.toString()}
+                aria-label="Select storage bin"
               >
                 <FormControl>
                   <SelectTrigger>
