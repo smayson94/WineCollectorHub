@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertWineSchema, type InsertWine } from "@db/schema";
@@ -10,6 +11,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,12 +23,13 @@ import {
 } from "@/components/ui/select";
 
 interface WineFormProps {
-  onSubmit: (data: InsertWine) => void;
+  onSubmit: (data: InsertWine, image?: File) => void;
   bins: { id: number; name: string }[];
   defaultValues?: Partial<InsertWine>;
 }
 
 export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProps) {
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const form = useForm<InsertWine>({
     resolver: zodResolver(insertWineSchema),
     defaultValues: defaultValues || {
@@ -42,7 +46,7 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-describedby="form-description">
+      <form onSubmit={form.handleSubmit((data) => onSubmit(data, selectedImage || undefined))} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}
           name="binId"
@@ -186,9 +190,30 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
           />
         </div>
 
-        <Button type="submit" className="w-full">
-          Save Wine
-        </Button>
+        <div className="space-y-4">
+          <div className="border rounded-lg p-4">
+            <Label htmlFor="image" className="block mb-2">Wine Label Image</Label>
+            <div className="flex items-center gap-4">
+              {defaultValues?.imageUrl && (
+                <img
+                  src={defaultValues.imageUrl}
+                  alt="Wine Label"
+                  className="w-24 h-24 object-cover rounded-md"
+                />
+              )}
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+                className="flex-1"
+              />
+            </div>
+          </div>
+          <Button type="submit" className="w-full">
+            Save Wine
+          </Button>
+        </div>
       </form>
     </Form>
   );

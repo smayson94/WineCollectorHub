@@ -1,10 +1,14 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { db } from "db";
 import { bins, wines, reviews } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
+import { upload, processImage } from "./upload";
+import path from "path";
 
 export function registerRoutes(app: Express) {
+  // Serve uploaded files
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
   // Bins
   app.get("/api/bins", async (req, res) => {
     try {
@@ -34,9 +38,17 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/wines", async (req, res) => {
+  app.post("/api/wines", upload.single("image"), async (req, res) => {
     try {
-      const newWine = await db.insert(wines).values(req.body).returning();
+      const wineData = JSON.parse(req.body.wine);
+      
+      if (req.file) {
+        const { imageUrl, thumbnailUrl } = await processImage(req.file);
+        wineData.imageUrl = imageUrl;
+        wineData.thumbnailUrl = thumbnailUrl;
+      }
+
+      const newWine = await db.insert(wines).values(wineData).returning();
       res.json(newWine[0]);
     } catch (error) {
       res.status(500).json({ error: "Failed to create wine" });

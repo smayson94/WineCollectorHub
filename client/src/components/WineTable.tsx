@@ -40,7 +40,7 @@ import {
   Wine as WineIcon,
   Search,
   Filter,
-  Plus
+  Plus as PlusIcon,
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
 
@@ -118,7 +118,7 @@ export default function WineTable() {
     return wines.filter((wine) => {
       const matchesSearch = wine.name.toLowerCase().includes(search.toLowerCase()) ||
         wine.producer.toLowerCase().includes(search.toLowerCase());
-      const matchesRegion = !filterRegion || wine.region === filterRegion;
+      const matchesRegion = !filterRegion || filterRegion === 'all' || wine.region === filterRegion;
       return matchesSearch && matchesRegion;
     });
   }, [wines, search, filterRegion]);
@@ -175,8 +175,8 @@ export default function WineTable() {
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">All regions</SelectItem>
-            {uniqueRegions.map((region) => (
+            <SelectItem value="all">All regions</SelectItem>
+            {uniqueRegions.filter(region => region).map((region) => (
               <SelectItem key={region} value={region}>
                 {region}
               </SelectItem>
@@ -288,14 +288,24 @@ export default function WineTable() {
                 }
                 
                 try {
-                  const response = await fetch(
-                    selectedWine ? `/api/wines/${selectedWine.id}` : "/api/wines",
-                    {
-                      method: selectedWine ? "PUT" : "POST",
+                  let response;
+                  if (selectedWine) {
+                    response = await fetch(`/api/wines/${selectedWine.id}`, {
+                      method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify(data),
+                    });
+                  } else {
+                    const formData = new FormData();
+                    formData.append("wine", JSON.stringify(data));
+                    if (image) {
+                      formData.append("image", image);
                     }
-                  );
+                    response = await fetch("/api/wines", {
+                      method: "POST",
+                      body: formData,
+                    });
+                  }
                   
                   if (!response.ok) {
                     const error = await response.json();
