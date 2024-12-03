@@ -40,6 +40,7 @@ import {
   Wine as WineIcon,
   Search,
   Filter,
+  Plus
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
 
