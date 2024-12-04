@@ -112,7 +112,15 @@ export function registerRoutes(app: Express) {
   // Analytics
   app.get("/api/analytics", async (req, res) => {
     try {
-      const [vintageDistribution, regionDistribution] = await Promise.all([
+      const currentYear = new Date().getFullYear();
+      const [
+        vintageDistribution, 
+        regionDistribution, 
+        varietyDistribution, 
+        ratingsByVintage,
+        ageAnalysis,
+        binDistribution
+      ] = await Promise.all([
         db
           .select({
             vintage: wines.vintage,
@@ -129,13 +137,65 @@ export function registerRoutes(app: Express) {
           .from(wines)
           .groupBy(wines.region)
           .orderBy(wines.region),
+        db
+          .select({
+            variety: wines.variety,
+            count: sql`count(${wines.id})`,
+          })
+          .from(wines)
+          .groupBy(wines.variety)
+          .orderBy(wines.variety),
+        db
+          .select({
+            vintage: wines.vintage,
+            avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
+            count: sql`count(distinct ${wines.id})`,
+          })
+          .from(wines)
+          .leftJoin(reviews, eq(reviews.wineId, wines.id))
+          .groupBy(wines.vintage)
+          .having(sql`count(${reviews.id}) > 0`)
+          .orderBy(wines.vintage),
+        db
+          .select({
+            status: sql`CASE 
+              WHEN ${wines.drinkFrom} IS NULL OR ${wines.drinkTo} IS NULL THEN 'Unspecified'
+              WHEN ${currentYear} < ${wines.drinkFrom} THEN 'Too Young'
+              WHEN ${currentYear} > ${wines.drinkTo} THEN 'Past Peak'
+              ELSE 'Ready to Drink'
+            END`,
+            count: sql`count(*)`,
+          })
+          .from(wines)
+          .groupBy(sql`CASE 
+            WHEN ${wines.drinkFrom} IS NULL OR ${wines.drinkTo} IS NULL THEN 'Unspecified'
+            WHEN ${currentYear} < ${wines.drinkFrom} THEN 'Too Young'
+            WHEN ${currentYear} > ${wines.drinkTo} THEN 'Past Peak'
+            ELSE 'Ready to Drink'
+          END`),
+        db
+          .select({
+            binName: bins.name,
+            capacity: bins.capacity,
+            count: sql`count(${wines.id})`,
+            utilizationRate: sql`ROUND((count(${wines.id})::float / ${bins.capacity}::float * 100)::numeric, 2)`,
+          })
+          .from(bins)
+          .leftJoin(wines, eq(wines.binId, bins.id))
+          .groupBy(bins.id)
+          .orderBy(bins.name)
       ]);
 
       res.json({
         vintageDistribution,
         regionDistribution,
+        varietyDistribution,
+        ratingsByVintage,
+        ageAnalysis,
+        binDistribution,
       });
     } catch (error) {
+      console.error('Analytics error:', error);
       res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });

@@ -74,5 +74,17 @@ app.use((req, res, next) => {
   const PORT = 5000;
   server.listen(PORT, "0.0.0.0", () => {
     log(`serving on port ${PORT}`);
+  }).on('error', (error) => {
+    console.error('Server startup error:', error);
+    process.exit(1);
+  });
+
+  // Handle graceful shutdown
+  process.on('SIGTERM', () => {
+    log('Received SIGTERM. Performing graceful shutdown...');
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
   });
 })();
