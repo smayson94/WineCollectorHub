@@ -1,3 +1,4 @@
+import fs from "fs";
 import express, { type Express } from "express";
 import { db } from "db";
 import { bins, wines, reviews } from "@db/schema";
@@ -8,7 +9,11 @@ import path from "path";
 
 export function registerRoutes(app: Express) {
   // Serve uploaded files
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsDir));
   // Bins
   app.get("/api/bins", async (req, res) => {
     try {
@@ -40,8 +45,11 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/wines", upload.single("image"), async (req, res) => {
     try {
-      const wineData = JSON.parse(req.body.wine);
-      
+      const wineData = typeof req.body.wine === 'string'
+        ? JSON.parse(req.body.wine)
+        : req.body.wine;
+
+      // Add image URLs if an image was uploaded
       if (req.file) {
         const { imageUrl, thumbnailUrl } = await processImage(req.file);
         wineData.imageUrl = imageUrl;
@@ -51,6 +59,7 @@ export function registerRoutes(app: Express) {
       const newWine = await db.insert(wines).values(wineData).returning();
       res.json(newWine[0]);
     } catch (error) {
+      console.error('Wine creation error:', error);
       res.status(500).json({ error: "Failed to create wine" });
     }
   });
