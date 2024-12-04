@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 
 interface WineFormProps {
-  onSubmit: (data: InsertWine, image?: File) => void;
+  onSubmit: (data: InsertWine, image?: File | null) => void;
   bins: { id: number; name: string }[];
   defaultValues?: Partial<InsertWine>;
 }

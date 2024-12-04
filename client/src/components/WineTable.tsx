@@ -293,7 +293,9 @@ export default function WineTable() {
               onSubmit={async (data, image) => {
                 try {
                   const formData = new FormData();
-                  formData.append("wine", JSON.stringify(data));
+                  // Remove createdAt from the data before sending
+                  const { createdAt, ...wineData } = data;
+                  formData.append("wine", JSON.stringify(wineData));
                   if (image) {
                     formData.append("image", image);
                   }

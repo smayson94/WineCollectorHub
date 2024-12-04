@@ -70,6 +70,9 @@ export function registerRoutes(app: Express) {
         ? JSON.parse(req.body.wine)
         : req.body;
 
+      // Remove createdAt from update data
+      delete wineData.createdAt;
+
       // Remove undefined values
       Object.keys(wineData).forEach(key => 
         wineData[key] === undefined && delete wineData[key]
