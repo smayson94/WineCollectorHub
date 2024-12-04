@@ -64,14 +64,25 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/wines/:id", async (req, res) => {
+  app.put("/api/wines/:id", upload.single("image"), async (req, res) => {
     try {
+      const wineData = typeof req.body.wine === 'string'
+        ? JSON.parse(req.body.wine)
+        : req.body.wine;
+
+      if (req.file) {
+        const { imageUrl, thumbnailUrl } = await processImage(req.file);
+        wineData.imageUrl = imageUrl;
+        wineData.thumbnailUrl = thumbnailUrl;
+      }
+
       const wine = await db.update(wines)
-        .set(req.body)
+        .set(wineData)
         .where(eq(wines.id, parseInt(req.params.id)))
         .returning();
       res.json(wine[0]);
     } catch (error) {
+      console.error('Wine update error:', error);
       res.status(500).json({ error: "Failed to update wine" });
     }
   });
