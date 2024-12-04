@@ -47,15 +47,20 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(async (data) => {
-        const formData = new FormData();
-        formData.append("wine", JSON.stringify({
-          ...data,
-          binId: parseInt(data.binId.toString())
-        }));
-        if (selectedImage) {
-          formData.append("image", selectedImage);
+        try {
+          const formData = new FormData();
+          const { id, ...wineData } = data;
+          formData.append("wine", JSON.stringify({
+            ...wineData,
+            binId: parseInt(wineData.binId.toString())
+          }));
+          if (selectedImage) {
+            formData.append("image", selectedImage);
+          }
+          await onSubmit(data, selectedImage);
+        } catch (error) {
+          console.error("Form submission error:", error);
         }
-        await onSubmit(data, selectedImage);
       })} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}

@@ -70,22 +70,17 @@ export function registerRoutes(app: Express) {
         ? JSON.parse(req.body.wine)
         : req.body;
 
-      // Remove createdAt from update data
-      delete wineData.createdAt;
-
-      // Remove undefined values
-      Object.keys(wineData).forEach(key => 
-        wineData[key] === undefined && delete wineData[key]
-      );
+      // Remove id and createdAt from update data
+      const { id, createdAt, ...updateData } = wineData;
 
       if (req.file) {
         const { imageUrl, thumbnailUrl } = await processImage(req.file);
-        wineData.imageUrl = imageUrl;
-        wineData.thumbnailUrl = thumbnailUrl;
+        updateData.imageUrl = imageUrl;
+        updateData.thumbnailUrl = thumbnailUrl;
       }
 
       const wine = await db.update(wines)
-        .set(wineData)
+        .set(updateData)
         .where(eq(wines.id, parseInt(req.params.id)))
         .returning();
       res.json(wine[0]);
