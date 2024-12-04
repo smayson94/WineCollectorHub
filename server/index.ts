@@ -69,22 +69,42 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  }).on('error', (error) => {
-    console.error('Server startup error:', error);
+  const startServer = (port: number) => {
+    return new Promise((resolve, reject) => {
+      server.listen(port, "0.0.0.0", () => {
+        const addressInfo = server.address();
+        const actualPort = typeof addressInfo === 'object' ? addressInfo?.port : port;
+        log(`Server listening on port ${actualPort}`);
+        resolve(actualPort);
+      }).on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          log(`Port ${port} is in use, trying next available port...`);
+          server.close();
+          startServer(0).then(resolve).catch(reject);
+        } else {
+          reject(error);
+        }
+      });
+    });
+  };
+
+  try {
+    const PORT = Number(process.env.PORT) || 3001;
+    await startServer(PORT);
+  } catch (error) {
+    console.error('Failed to start server:', error);
     process.exit(1);
-  });
+  }
 
   // Handle graceful shutdown
-  process.on('SIGTERM', () => {
-    log('Received SIGTERM. Performing graceful shutdown...');
+  const shutdown = () => {
+    log('Performing graceful shutdown...');
     server.close(() => {
       log('Server closed');
       process.exit(0);
     });
-  });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 })();

@@ -271,10 +271,9 @@ export default function WineTable() {
 
       <Dialog open={isWineDialogOpen} onOpenChange={setIsWineDialogOpen}>
         <DialogContent 
-          className="sm:max-w-[600px]" 
-          aria-describedby="wine-form-description"
+          className="sm:max-w-[600px]"
           description={selectedWine ? "Update the details of your wine." : "Add a new wine to your collection."}
-          aria-label={selectedWine ? "Edit Wine Form" : "Add Wine Form"}
+          aria-describedby="wine-form-description"
         >
           <DialogHeader>
             <DialogTitle>

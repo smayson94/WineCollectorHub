@@ -186,6 +186,99 @@ export function registerRoutes(app: Express) {
           .orderBy(bins.name)
       ]);
 
+      // Add new analytics queries
+      const vintagePerformance = await db
+        .select({
+          vintage: wines.vintage,
+          totalWines: sql`count(*)`,
+          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
+          ratingCount: sql`count(${reviews.rating})`,
+        })
+        .from(wines)
+        .leftJoin(reviews, eq(reviews.wineId, wines.id))
+        .groupBy(wines.vintage)
+        .orderBy(wines.vintage);
+
+      const storageAnalytics = await db
+        .select({
+          binId: bins.id,
+          binName: bins.name,
+          capacity: bins.capacity,
+          used: sql`count(${wines.id})`,
+          utilizationTrend: sql`array_agg(${wines.createdAt} ORDER BY ${wines.createdAt})`,
+        })
+        .from(bins)
+        .leftJoin(wines, eq(wines.binId, bins.id))
+        .groupBy(bins.id)
+        .orderBy(bins.name);
+
+      // Calculate value analytics
+      const valueAnalytics = await db
+        .select({
+          totalValue: sql`sum(${wines.marketValue})`,
+          avgBottleValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
+          valueByRegion: sql`json_object_agg(
+            ${wines.region}, 
+            (select avg(w2.market_value)::numeric(10,2) 
+             from ${wines} w2 
+             where w2.region = ${wines.region})
+          )`,
+          priceRanges: sql`json_build_object(
+            'under_20', count(*) filter (where ${wines.marketValue} < 20),
+            '20_50', count(*) filter (where ${wines.marketValue} between 20 and 50),
+            '50_100', count(*) filter (where ${wines.marketValue} between 50 and 100),
+            'over_100', count(*) filter (where ${wines.marketValue} > 100)
+          )`
+        })
+        .from(wines);
+
+      // Calculate regional performance metrics
+      const regionalPerformance = await db
+        .select({
+          region: wines.region,
+          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
+          totalWines: sql`count(distinct ${wines.id})`,
+          avgValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
+          topVarieties: sql`array_agg(distinct ${wines.variety}) filter (where ${wines.variety} is not null)`
+        })
+        .from(wines)
+        .leftJoin(reviews, eq(reviews.wineId, wines.id))
+        .groupBy(wines.region)
+        .having(sql`count(${wines.id}) > 0`);
+
+      // Calculate value analytics
+      const valueAnalytics = await db
+        .select({
+          totalValue: sql`sum(${wines.marketValue})::numeric(10,2)`,
+          avgBottleValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
+          valueByRegion: sql`json_object_agg(
+            ${wines.region}, 
+            avg(${wines.marketValue})::numeric(10,2)
+          )`,
+          priceRanges: sql`json_build_object(
+            'under_20', count(*) filter (where ${wines.marketValue} < 20),
+            '20_50', count(*) filter (where ${wines.marketValue} between 20 and 50),
+            '50_100', count(*) filter (where ${wines.marketValue} between 50 and 100),
+            'over_100', count(*) filter (where ${wines.marketValue} > 100)
+          )`
+        })
+        .from(wines)
+        .where(sql`${wines.marketValue} is not null`);
+
+      // Calculate regional performance metrics
+      const regionalPerformance = await db
+        .select({
+          region: wines.region,
+          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
+          totalWines: sql`count(distinct ${wines.id})`,
+          avgValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
+          topVarieties: sql`array_agg(distinct ${wines.variety}) filter (where ${wines.variety} is not null)`
+        })
+        .from(wines)
+        .leftJoin(reviews, eq(reviews.wineId, wines.id))
+        .groupBy(wines.region)
+        .having(sql`count(${wines.id}) > 0`);
+
       res.json({
         vintageDistribution,
         regionDistribution,
@@ -193,6 +286,10 @@ export function registerRoutes(app: Express) {
         ratingsByVintage,
         ageAnalysis,
         binDistribution,
+        vintagePerformance,
+        storageAnalytics,
+        valueAnalytics: valueAnalytics[0], // Since we're aggregating, we get an array with one element
+        regionalPerformance
       });
     } catch (error) {
       console.error('Analytics error:', error);
