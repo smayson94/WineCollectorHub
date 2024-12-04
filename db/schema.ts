@@ -41,7 +41,9 @@ export type Bin = z.infer<typeof selectBinSchema>;
 
 export const insertWineSchema = createInsertSchema(wines);
 export const selectWineSchema = createSelectSchema(wines);
-export type InsertWine = z.infer<typeof insertWineSchema>;
+export type InsertWine = z.infer<typeof insertWineSchema> & {
+  image?: File;
+};
 export type Wine = z.infer<typeof selectWineSchema>;
 
 export const insertReviewSchema = createInsertSchema(reviews);

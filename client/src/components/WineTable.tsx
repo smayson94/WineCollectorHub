@@ -118,7 +118,7 @@ export default function WineTable() {
     return wines.filter((wine) => {
       const matchesSearch = wine.name.toLowerCase().includes(search.toLowerCase()) ||
         wine.producer.toLowerCase().includes(search.toLowerCase());
-      const matchesRegion = !filterRegion || filterRegion === 'all' || wine.region === filterRegion;
+      const matchesRegion = !filterRegion || filterRegion === "all" || wine.region === filterRegion;
       return matchesSearch && matchesRegion;
     });
   }, [wines, search, filterRegion]);
@@ -155,7 +155,7 @@ export default function WineTable() {
           onClick={() => setIsWineDialogOpen(true)}
           className="mr-4"
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <PlusIcon className="mr-2 h-4 w-4" />
           Add Wine
         </Button>
         <div className="flex-1">
@@ -175,12 +175,14 @@ export default function WineTable() {
             <SelectValue placeholder="Filter by region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All regions</SelectItem>
-            {uniqueRegions.filter(region => region).map((region) => (
-              <SelectItem key={region} value={region}>
-                {region}
-              </SelectItem>
-            ))}
+            <SelectItem value="_all">All regions</SelectItem>
+            {uniqueRegions
+              .filter(region => region && region.trim() !== '')
+              .map((region) => (
+                <SelectItem key={region} value={region}>
+                  {region}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
@@ -210,7 +212,18 @@ export default function WineTable() {
             )}
             {filteredWines.map((wine) => (
               <TableRow key={wine.id}>
-                <TableCell className="font-medium">{wine.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {wine.thumbnailUrl && (
+                      <img
+                        src={wine.thumbnailUrl}
+                        alt={`${wine.name} label`}
+                        className="w-8 h-8 object-cover rounded-sm"
+                      />
+                    )}
+                    {wine.name}
+                  </div>
+                </TableCell>
                 <TableCell>{wine.vintage}</TableCell>
                 <TableCell>{wine.producer}</TableCell>
                 <TableCell>{wine.region}</TableCell>
@@ -277,7 +290,7 @@ export default function WineTable() {
           ) : (
             <WineForm
               bins={bins}
-              onSubmit={async (data) => {
+              onSubmit={async (data, image) => {
                 if (!data.binId) {
                   toast({
                     title: "Error",

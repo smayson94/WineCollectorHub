@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus as PlusIcon } from "lucide-react";
 import WineTable from "../components/WineTable";
 
 export default function Wines() {
@@ -16,7 +16,7 @@ export default function Wines() {
             }
           }
         }}>
-          <Plus className="mr-2 h-4 w-4" />
+          <PlusIcon className="mr-2 h-4 w-4" />
           Add Wine
         </Button>
       </div>
