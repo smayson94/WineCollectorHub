@@ -68,7 +68,12 @@ export function registerRoutes(app: Express) {
     try {
       const wineData = typeof req.body.wine === 'string'
         ? JSON.parse(req.body.wine)
-        : req.body.wine;
+        : req.body;
+
+      // Remove undefined values
+      Object.keys(wineData).forEach(key => 
+        wineData[key] === undefined && delete wineData[key]
+      );
 
       if (req.file) {
         const { imageUrl, thumbnailUrl } = await processImage(req.file);

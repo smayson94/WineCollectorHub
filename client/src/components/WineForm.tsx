@@ -54,10 +54,8 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
         }));
         if (selectedImage) {
           formData.append("image", selectedImage);
-          await onSubmit(data, selectedImage);
-        } else {
-          await onSubmit(data, undefined);
         }
+        await onSubmit(data, selectedImage);
       })} className="space-y-6" aria-describedby="form-description">
         <FormField
           control={form.control}

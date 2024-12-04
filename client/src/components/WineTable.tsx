@@ -291,29 +291,20 @@ export default function WineTable() {
             <WineForm
               bins={bins}
               onSubmit={async (data, image) => {
-                if (!data.binId) {
-                  toast({
-                    title: "Error",
-                    description: "Please select a storage bin",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
                 try {
+                  const formData = new FormData();
+                  formData.append("wine", JSON.stringify(data));
+                  if (image) {
+                    formData.append("image", image);
+                  }
+                  
                   let response;
                   if (selectedWine) {
                     response = await fetch(`/api/wines/${selectedWine.id}`, {
                       method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(data),
+                      body: formData,
                     });
                   } else {
-                    const formData = new FormData();
-                    formData.append("wine", JSON.stringify(data));
-                    if (image) {
-                      formData.append("image", image);
-                    }
                     response = await fetch("/api/wines", {
                       method: "POST",
                       body: formData,
