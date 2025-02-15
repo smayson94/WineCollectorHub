@@ -140,7 +140,7 @@ export default function WineTable() {
           wineId,
           rating,
           notes: "",
-          reviewDate: new Date().toISOString(),
+          reviewDate: new Date().toISOString(), // Ensure we're sending a properly formatted ISO string
         }),
       });
 

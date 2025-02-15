@@ -31,6 +31,7 @@ export function registerRoutes(app: Express) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", express.static(uploadsDir));
+
   // Bins
   app.get("/api/bins", async (req, res) => {
     try {
@@ -55,7 +56,17 @@ export function registerRoutes(app: Express) {
   // Wines
   app.get("/api/wines", async (req, res) => {
     try {
-      const allWines = await db.select().from(wines).orderBy(desc(wines.createdAt));
+      // Join with reviews to get the latest ratings
+      const allWines = await db
+        .select({
+          ...wines,
+          reviews: sql`json_agg(${reviews})`
+        })
+        .from(wines)
+        .leftJoin(reviews, eq(reviews.wineId, wines.id))
+        .groupBy(wines.id)
+        .orderBy(desc(wines.createdAt));
+
       res.json(allWines);
     } catch (error) {
       console.error('Error fetching wines:', error);
@@ -69,7 +80,6 @@ export function registerRoutes(app: Express) {
         ? JSON.parse(req.body.wine)
         : req.body.wine;
 
-      // Add image URLs if an image was uploaded
       if (req.file) {
         const { imageUrl, thumbnailUrl } = await processImage(req.file);
         wineData.imageUrl = imageUrl;
@@ -90,7 +100,6 @@ export function registerRoutes(app: Express) {
         ? JSON.parse(req.body.wine)
         : req.body;
 
-      // Remove id and createdAt from update data
       const { id, createdAt, ...updateData } = wineData;
 
       if (req.file) {
@@ -120,15 +129,29 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Reviews
+  // Reviews - with improved date handling
   app.post("/api/reviews", async (req, res) => {
     try {
       const { wineId, rating, notes, reviewDate } = req.body;
       console.log('Received review data:', { wineId, rating, notes, reviewDate });
 
+      // Validate required fields
       if (!wineId || typeof rating !== 'number' || rating < 0 || rating > 100) {
         return res.status(400).json({
           error: "Invalid review data. WineId is required and rating must be between 0 and 100."
+        });
+      }
+
+      // Validate reviewDate format
+      let parsedDate: Date;
+      try {
+        parsedDate = reviewDate ? new Date(reviewDate) : new Date();
+        if (isNaN(parsedDate.getTime())) {
+          throw new Error('Invalid date');
+        }
+      } catch (error) {
+        return res.status(400).json({
+          error: "Invalid review date format. Please provide a valid ISO date string or leave empty for current date."
         });
       }
 
@@ -138,174 +161,20 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ error: "Wine not found" });
       }
 
-      const newReview = await db.insert(reviews).values({
+      // Create the review with validated date
+      const review = {
         wineId,
         rating,
         notes: notes || '',
-        reviewDate: reviewDate || new Date().toISOString(),
-      }).returning();
+        reviewDate: parsedDate
+      };
 
+      const newReview = await db.insert(reviews).values(review).returning();
       console.log('Review created successfully:', newReview[0]);
       res.json(newReview[0]);
     } catch (error) {
       console.error('Review creation error:', error);
       res.status(500).json({ error: "Failed to create review" });
-    }
-  });
-
-  // Analytics
-  app.get("/api/analytics", async (req, res) => {
-    try {
-      const currentYear = new Date().getFullYear();
-      const [
-        vintageDistribution,
-        regionDistribution,
-        varietyDistribution,
-        ratingsByVintage,
-        ageAnalysis,
-        binDistribution
-      ] = await Promise.all([
-        db
-          .select({
-            vintage: wines.vintage,
-            count: sql`count(${wines.id})`,
-          })
-          .from(wines)
-          .groupBy(wines.vintage)
-          .orderBy(wines.vintage),
-        db
-          .select({
-            region: wines.region,
-            count: sql`count(${wines.id})`,
-          })
-          .from(wines)
-          .groupBy(wines.region)
-          .orderBy(wines.region),
-        db
-          .select({
-            variety: wines.variety,
-            count: sql`count(${wines.id})`,
-          })
-          .from(wines)
-          .groupBy(wines.variety)
-          .orderBy(wines.variety),
-        db
-          .select({
-            vintage: wines.vintage,
-            avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
-            count: sql`count(distinct ${wines.id})`,
-          })
-          .from(wines)
-          .leftJoin(reviews, eq(reviews.wineId, wines.id))
-          .groupBy(wines.vintage)
-          .having(sql`count(${reviews.id}) > 0`)
-          .orderBy(wines.vintage),
-        db
-          .select({
-            status: sql`CASE 
-              WHEN ${wines.drinkFrom} IS NULL OR ${wines.drinkTo} IS NULL THEN 'Unspecified'
-              WHEN ${currentYear} < ${wines.drinkFrom} THEN 'Too Young'
-              WHEN ${currentYear} > ${wines.drinkTo} THEN 'Past Peak'
-              ELSE 'Ready to Drink'
-            END`,
-            count: sql`count(*)`,
-          })
-          .from(wines)
-          .groupBy(sql`CASE 
-            WHEN ${wines.drinkFrom} IS NULL OR ${wines.drinkTo} IS NULL THEN 'Unspecified'
-            WHEN ${currentYear} < ${wines.drinkFrom} THEN 'Too Young'
-            WHEN ${currentYear} > ${wines.drinkTo} THEN 'Past Peak'
-            ELSE 'Ready to Drink'
-          END`),
-        db
-          .select({
-            binName: bins.name,
-            capacity: bins.capacity,
-            count: sql`count(${wines.id})`,
-            utilizationRate: sql`ROUND((count(${wines.id})::float / ${bins.capacity}::float * 100)::numeric, 2)`,
-          })
-          .from(bins)
-          .leftJoin(wines, eq(wines.binId, bins.id))
-          .groupBy(bins.id)
-          .orderBy(bins.name)
-      ]);
-
-      // Add new analytics queries
-      const vintagePerformance = await db
-        .select({
-          vintage: wines.vintage,
-          totalWines: sql`count(*)`,
-          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
-          ratingCount: sql`count(${reviews.rating})`,
-        })
-        .from(wines)
-        .leftJoin(reviews, eq(reviews.wineId, wines.id))
-        .groupBy(wines.vintage)
-        .orderBy(wines.vintage);
-
-      const storageAnalytics = await db
-        .select({
-          binId: bins.id,
-          binName: bins.name,
-          capacity: bins.capacity,
-          used: sql`count(${wines.id})`,
-          utilizationTrend: sql`array_agg(${wines.createdAt} ORDER BY ${wines.createdAt})`,
-        })
-        .from(bins)
-        .leftJoin(wines, eq(wines.binId, bins.id))
-        .groupBy(bins.id)
-        .orderBy(bins.name);
-
-      // Calculate value analytics
-      const valueAnalytics = await db
-        .select({
-          totalValue: sql`sum(${wines.marketValue})`,
-          avgBottleValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
-          valueByRegion: sql`json_object_agg(
-            ${wines.region}, 
-            (select avg(w2.market_value)::numeric(10,2) 
-             from ${wines} w2 
-             where w2.region = ${wines.region})
-          )`,
-          priceRanges: sql`json_build_object(
-            'under_20', count(*) filter (where ${wines.marketValue} < 20),
-            '20_50', count(*) filter (where ${wines.marketValue} between 20 and 50),
-            '50_100', count(*) filter (where ${wines.marketValue} between 50 and 100),
-            'over_100', count(*) filter (where ${wines.marketValue} > 100)
-          )`
-        })
-        .from(wines);
-
-      // Calculate regional performance metrics
-      const regionalPerformance = await db
-        .select({
-          region: wines.region,
-          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
-          totalWines: sql`count(distinct ${wines.id})`,
-          avgValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
-          topVarieties: sql`array_agg(distinct ${wines.variety}) filter (where ${wines.variety} is not null)`
-        })
-        .from(wines)
-        .leftJoin(reviews, eq(reviews.wineId, wines.id))
-        .groupBy(wines.region)
-        .having(sql`count(${wines.id}) > 0`);
-
-
-      res.json({
-        vintageDistribution,
-        regionDistribution,
-        varietyDistribution,
-        ratingsByVintage,
-        ageAnalysis,
-        binDistribution,
-        vintagePerformance,
-        storageAnalytics,
-        valueAnalytics: valueAnalytics[0], // Since we're aggregating, we get an array with one element
-        regionalPerformance
-      });
-    } catch (error) {
-      console.error('Analytics error:', error);
-      res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });
 }
