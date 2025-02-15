@@ -43,38 +43,10 @@ import {
   Plus as PlusIcon,
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
 
 interface WineWithReviews extends Wine {
   reviews?: Review[];
   bin?: Bin;
-  averageRating?: number;
-}
-
-function RatingStars({ rating, onRate }: { rating: number; onRate: (rating: number) => void }) {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          onClick={() => onRate(star)}
-          className={`hover:text-yellow-400 transition-colors ${
-            star <= rating ? "text-yellow-400" : "text-gray-300"
-          }`}
-        >
-          <Star className="h-5 w-5" />
-        </button>
-      ))}
-    </div>
-  );
 }
 
 export default function WineTable() {
@@ -82,29 +54,57 @@ export default function WineTable() {
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
   const [isWineDialogOpen, setIsWineDialogOpen] = useState(false);
   const [selectedWine, setSelectedWine] = useState<WineWithReviews | null>(null);
-  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
-  const [selectedWineForRating, setSelectedWineForRating] = useState<WineWithReviews | null>(null);
-  const [tempRating, setTempRating] = useState(5);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: wines, isLoading } = useQuery<WineWithReviews[]>({
+  const { data: wines, isLoading, error: wineError } = useQuery<WineWithReviews[]>({
     queryKey: ["wines"],
     queryFn: async () => {
-      const response = await fetch("/api/wines");
-      if (!response.ok) throw new Error("Failed to fetch wines");
-      return response.json();
+      try {
+        console.log("Fetching wines...");
+        const response = await fetch("/api/wines");
+        console.log("Wines API response status:", response.status);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch wines: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Wines data received:", data.length, "wines");
+        return data;
+      } catch (error) {
+        console.error("Error fetching wines:", error);
+        throw error;
+      }
     },
   });
 
-  const { data: bins } = useQuery<Bin[]>({
+  const { data: bins, error: binError } = useQuery<Bin[]>({
     queryKey: ["bins"],
     queryFn: async () => {
-      const response = await fetch("/api/bins");
-      if (!response.ok) throw new Error("Failed to fetch bins");
-      return response.json();
+      try {
+        console.log("Fetching bins...");
+        const response = await fetch("/api/bins");
+        console.log("Bins API response status:", response.status);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch bins: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Bins data received:", data.length, "bins");
+        return data;
+      } catch (error) {
+        console.error("Error fetching bins:", error);
+        throw error;
+      }
     },
   });
+
+  // Add error handling UI
+  if (wineError) {
+    return <div className="text-red-500">Error loading wines: {(wineError as Error).message}</div>;
+  }
+
+  if (binError) {
+    return <div className="text-red-500">Error loading bins: {(binError as Error).message}</div>;
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -144,12 +144,6 @@ export default function WineTable() {
     },
   });
 
-  const calculateAverageRating = (reviews: Review[] | undefined): number => {
-    if (!reviews || reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return Number((sum / reviews.length).toFixed(1));
-  };
-
   const filteredWines = useMemo(() => {
     if (!wines) return [];
     return wines.filter((wine) => {
@@ -177,24 +171,9 @@ export default function WineTable() {
   };
 
   const renderRating = (wine: WineWithReviews) => {
-    const avgRating = calculateAverageRating(wine.reviews);
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-[100px]"
-        onClick={() => {
-          setSelectedWineForRating(wine);
-          setTempRating(avgRating || 5);
-          setIsRatingDialogOpen(true);
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <Star className={`h-4 w-4 ${avgRating > 0 ? "text-yellow-400" : "text-gray-300"}`} />
-          <span>{avgRating > 0 ? avgRating.toFixed(1) : "Rate"}</span>
-        </div>
-      </Button>
-    );
+    const avgRating = wine.reviews?.reduce((acc, rev) => acc + rev.rating, 0) ?? 0;
+    const ratingCount = wine.reviews?.length ?? 0;
+    return ratingCount > 0 ? (avgRating / ratingCount).toFixed(1) : "-";
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -285,7 +264,17 @@ export default function WineTable() {
                     ? `${wine.drinkFrom}-${wine.drinkTo}`
                     : "Not specified"}
                 </TableCell>
-                <TableCell>{renderRating(wine)}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-[60px]"
+                    onClick={() => reviewMutation.mutate({ wineId: wine.id, rating: 5 })}
+                  >
+                    <Star className="mr-1 h-4 w-4" />
+                    {renderRating(wine)}
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -385,38 +374,6 @@ export default function WineTable() {
           )}
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rate Wine</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedWineForRating?.name} ({selectedWineForRating?.vintage})
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <RatingStars
-              rating={tempRating}
-              onRate={(rating) => setTempRating(rating)}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button
-              onClick={() => {
-                if (selectedWineForRating) {
-                  reviewMutation.mutate({
-                    wineId: selectedWineForRating.id,
-                    rating: tempRating,
-                  });
-                  setIsRatingDialogOpen(false);
-                }
-              }}
-            >
-              Save Rating
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
