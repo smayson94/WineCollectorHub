@@ -213,10 +213,14 @@ export default function WineTable() {
 
 
   const renderRating = (wine: WineWithReviews) => {
-    if (!wine.reviews || wine.reviews.length === 0) {
+    if (!wine.reviews || !Array.isArray(wine.reviews) || wine.reviews.length === 0) {
       return "-";
     }
-    const avgRating = wine.reviews.reduce((acc, rev) => acc + rev.rating, 0) / wine.reviews.length;
+    // Filter out any null ratings before calculating average
+    const validReviews = wine.reviews.filter(review => review && typeof review.rating === 'number');
+    if (validReviews.length === 0) return "-";
+
+    const avgRating = validReviews.reduce((acc, rev) => acc + rev.rating, 0) / validReviews.length;
     return avgRating.toFixed(0);
   };
 

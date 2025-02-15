@@ -57,7 +57,9 @@ const startApp = async () => {
   });
 
   // Register API routes first
+  log('Registering API routes...');
   registerRoutes(app);
+  log('API routes registered successfully');
   const server = createServer(app);
 
   // Error handling middleware

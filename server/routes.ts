@@ -56,18 +56,35 @@ export function registerRoutes(app: Express) {
   // Wines
   app.get("/api/wines", async (req, res) => {
     try {
-      // Join with reviews to get the latest ratings
+      // Join with reviews to get the latest ratings, handle null reviews
       const allWines = await db
         .select({
-          ...wines,
-          reviews: sql`json_agg(${reviews})`
+          id: wines.id,
+          name: wines.name,
+          vintage: wines.vintage,
+          region: wines.region,
+          variety: wines.variety,
+          producer: wines.producer,
+          binId: wines.binId,
+          drinkFrom: wines.drinkFrom,
+          drinkTo: wines.drinkTo,
+          imageUrl: wines.imageUrl,
+          thumbnailUrl: wines.thumbnailUrl,
+          createdAt: wines.createdAt,
+          reviews: sql<string>`COALESCE(json_agg(${reviews}) FILTER (WHERE ${reviews.id} IS NOT NULL), '[]')`
         })
         .from(wines)
         .leftJoin(reviews, eq(reviews.wineId, wines.id))
         .groupBy(wines.id)
         .orderBy(desc(wines.createdAt));
 
-      res.json(allWines);
+      // Parse the JSON string for reviews
+      const processedWines = allWines.map(wine => ({
+        ...wine,
+        reviews: JSON.parse(wine.reviews)
+      }));
+
+      res.json(processedWines);
     } catch (error) {
       console.error('Error fetching wines:', error);
       res.status(500).json({ error: "Failed to fetch wines" });
