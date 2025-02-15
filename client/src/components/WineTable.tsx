@@ -43,6 +43,7 @@ import {
   Plus as PlusIcon,
 } from "lucide-react";
 import type { Wine, Review, Bin } from "@db/schema";
+import { cn } from "@/lib/utils";
 
 interface WineWithReviews extends Wine {
   reviews?: Review[];
@@ -69,7 +70,11 @@ export default function WineTable() {
         }
         const data = await response.json();
         console.log("Wines data received:", data.length, "wines");
-        return data;
+        // Ensure reviews is always an array
+        return data.map((wine: WineWithReviews) => ({
+          ...wine,
+          reviews: wine.reviews || []
+        }));
       } catch (error) {
         console.error("Error fetching wines:", error);
         throw error;
@@ -131,15 +136,29 @@ export default function WineTable() {
           wineId,
           rating,
           notes: "",
+          reviewDate: new Date().toISOString(),
         }),
       });
-      if (!response.ok) throw new Error("Failed to add review");
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to add review: ${error}`);
+      }
+      return response.json();
     },
     onSuccess: () => {
+      // Invalidate and refetch wines to get updated ratings
       queryClient.invalidateQueries({ queryKey: ["wines"] });
       toast({
         title: "Success",
         description: "Review added successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Review error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add review",
+        variant: "destructive",
       });
     },
   });
@@ -170,10 +189,33 @@ export default function WineTable() {
     }
   };
 
+  const handleRating = async (wineId: number) => {
+    const rating = prompt("Rate this wine (1-5):");
+    if (rating === null) return;
+
+    const numRating = parseFloat(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+      toast({
+        title: "Invalid Rating",
+        description: "Please enter a number between 1 and 5",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await reviewMutation.mutateAsync({ wineId, rating: numRating });
+    } catch (error) {
+      console.error("Rating error:", error);
+    }
+  };
+
   const renderRating = (wine: WineWithReviews) => {
-    const avgRating = wine.reviews?.reduce((acc, rev) => acc + rev.rating, 0) ?? 0;
-    const ratingCount = wine.reviews?.length ?? 0;
-    return ratingCount > 0 ? (avgRating / ratingCount).toFixed(1) : "-";
+    if (!wine.reviews || wine.reviews.length === 0) {
+      return "-";
+    }
+    const avgRating = wine.reviews.reduce((acc, rev) => acc + rev.rating, 0) / wine.reviews.length;
+    return avgRating.toFixed(1);
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -269,9 +311,12 @@ export default function WineTable() {
                     variant="ghost"
                     size="sm"
                     className="w-[60px]"
-                    onClick={() => reviewMutation.mutate({ wineId: wine.id, rating: 5 })}
+                    onClick={() => handleRating(wine.id)}
                   >
-                    <Star className="mr-1 h-4 w-4" />
+                    <Star className={cn(
+                      "mr-1 h-4 w-4",
+                      wine.reviews?.length ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
+                    )} />
                     {renderRating(wine)}
                   </Button>
                 </TableCell>
