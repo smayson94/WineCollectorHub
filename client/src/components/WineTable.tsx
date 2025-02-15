@@ -146,18 +146,17 @@ export default function WineTable() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate and refetch wines to get updated ratings
       queryClient.invalidateQueries({ queryKey: ["wines"] });
       toast({
         title: "Success",
-        description: "Review added successfully",
+        description: "Rating updated successfully",
       });
     },
     onError: (error) => {
       console.error("Review error:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add review",
+        description: error instanceof Error ? error.message : "Failed to update rating",
         variant: "destructive",
       });
     },
@@ -189,22 +188,18 @@ export default function WineTable() {
     }
   };
 
-  const handleRating = async (wineId: number) => {
-    const rating = prompt("Rate this wine (1-5):");
-    if (rating === null) return;
-
-    const numRating = parseFloat(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+  const handleRating = async (wineId: number, newRating: number) => {
+    if (newRating < 0 || newRating > 100) {
       toast({
         title: "Invalid Rating",
-        description: "Please enter a number between 1 and 5",
+        description: "Please enter a number between 0 and 100",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      await reviewMutation.mutateAsync({ wineId, rating: numRating });
+      await reviewMutation.mutateAsync({ wineId, rating: newRating });
     } catch (error) {
       console.error("Rating error:", error);
     }
@@ -215,7 +210,7 @@ export default function WineTable() {
       return "-";
     }
     const avgRating = wine.reviews.reduce((acc, rev) => acc + rev.rating, 0) / wine.reviews.length;
-    return avgRating.toFixed(1);
+    return avgRating.toFixed(0);
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -307,18 +302,23 @@ export default function WineTable() {
                     : "Not specified"}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-[60px]"
-                    onClick={() => handleRating(wine.id)}
-                  >
-                    <Star className={cn(
-                      "mr-1 h-4 w-4",
-                      wine.reviews?.length ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
-                    )} />
-                    {renderRating(wine)}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-20"
+                      placeholder="0-100"
+                      defaultValue={renderRating(wine)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value)) {
+                          handleRating(wine.id, value);
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">/100</span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -369,6 +369,7 @@ export default function WineTable() {
           ) : (
             <WineForm
               bins={bins}
+              initialRating={selectedWine ? parseInt(renderRating(selectedWine)) : undefined}
               onSubmit={async (data, image) => {
                 try {
                   const formData = new FormData();

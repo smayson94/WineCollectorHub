@@ -26,10 +26,13 @@ interface WineFormProps {
   onSubmit: (data: InsertWine, image?: File | null) => void;
   bins: { id: number; name: string }[];
   defaultValues?: Partial<InsertWine>;
+  initialRating?: number;
 }
 
-export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProps) {
+export default function WineForm({ onSubmit, bins, defaultValues, initialRating }: WineFormProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [rating, setRating] = useState<number>(initialRating || 0);
+
   const form = useForm<InsertWine>({
     resolver: zodResolver(insertWineSchema),
     defaultValues: defaultValues || {
@@ -56,6 +59,9 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
           }));
           if (selectedImage) {
             formData.append("image", selectedImage);
+          }
+          if (rating > 0) {
+            formData.append("rating", rating.toString());
           }
           await onSubmit(data, selectedImage);
         } catch (error) {
@@ -204,6 +210,29 @@ export default function WineForm({ onSubmit, bins, defaultValues }: WineFormProp
             )}
           />
         </div>
+
+        {/* New Rating Field */}
+        <FormItem>
+          <FormLabel>Rating (0-100)</FormLabel>
+          <FormControl>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              value={rating}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (!isNaN(value) && value >= 0 && value <= 100) {
+                  setRating(value);
+                }
+              }}
+              placeholder="Enter rating (0-100)"
+            />
+          </FormControl>
+          <p className="text-sm text-muted-foreground">
+            Leave empty if not rated yet
+          </p>
+        </FormItem>
 
         <div className="space-y-4">
           <div className="border rounded-lg p-4">
