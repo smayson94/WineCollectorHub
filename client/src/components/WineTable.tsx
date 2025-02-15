@@ -129,6 +129,10 @@ export default function WineTable() {
 
   const reviewMutation = useMutation({
     mutationFn: async ({ wineId, rating }: { wineId: number; rating: number }) => {
+      if (rating < 0 || rating > 100) {
+        throw new Error("Rating must be between 0 and 100");
+      }
+
       const response = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -139,10 +143,12 @@ export default function WineTable() {
           reviewDate: new Date().toISOString(),
         }),
       });
+
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to add review: ${error}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add review");
       }
+
       return response.json();
     },
     onSuccess: () => {
@@ -161,6 +167,23 @@ export default function WineTable() {
       });
     },
   });
+
+  const handleRating = async (wineId: number, newRating: number) => {
+    try {
+      if (isNaN(newRating) || newRating < 0 || newRating > 100) {
+        toast({
+          title: "Invalid Rating",
+          description: "Please enter a number between 0 and 100",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await reviewMutation.mutateAsync({ wineId, rating: newRating });
+    } catch (error) {
+      console.error("Rating error:", error);
+    }
+  };
 
   const filteredWines = useMemo(() => {
     if (!wines) return [];
@@ -188,22 +211,6 @@ export default function WineTable() {
     }
   };
 
-  const handleRating = async (wineId: number, newRating: number) => {
-    if (newRating < 0 || newRating > 100) {
-      toast({
-        title: "Invalid Rating",
-        description: "Please enter a number between 0 and 100",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await reviewMutation.mutateAsync({ wineId, rating: newRating });
-    } catch (error) {
-      console.error("Rating error:", error);
-    }
-  };
 
   const renderRating = (wine: WineWithReviews) => {
     if (!wine.reviews || wine.reviews.length === 0) {

@@ -8,6 +8,23 @@ import { upload, processImage } from "./upload";
 import path from "path";
 
 export function registerRoutes(app: Express) {
+  // Add error handling middleware
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Global error handler:', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  });
+
+  // Test database connection
+  app.get("/api/health", async (req, res) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: 'healthy', database: 'connected' });
+    } catch (error) {
+      console.error('Database connection error:', error);
+      res.status(500).json({ status: 'unhealthy', error: 'Database connection failed' });
+    }
+  });
+
   // Serve uploaded files
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
@@ -20,6 +37,7 @@ export function registerRoutes(app: Express) {
       const allBins = await db.select().from(bins).orderBy(desc(bins.createdAt));
       res.json(allBins);
     } catch (error) {
+      console.error('Error fetching bins:', error);
       res.status(500).json({ error: "Failed to fetch bins" });
     }
   });
@@ -29,6 +47,7 @@ export function registerRoutes(app: Express) {
       const newBin = await db.insert(bins).values(req.body).returning();
       res.json(newBin[0]);
     } catch (error) {
+      console.error('Error creating bin:', error);
       res.status(500).json({ error: "Failed to create bin" });
     }
   });
@@ -39,6 +58,7 @@ export function registerRoutes(app: Express) {
       const allWines = await db.select().from(wines).orderBy(desc(wines.createdAt));
       res.json(allWines);
     } catch (error) {
+      console.error('Error fetching wines:', error);
       res.status(500).json({ error: "Failed to fetch wines" });
     }
   });
@@ -95,6 +115,7 @@ export function registerRoutes(app: Express) {
       await db.delete(wines).where(eq(wines.id, parseInt(req.params.id)));
       res.json({ success: true });
     } catch (error) {
+      console.error('Wine delete error:', error);
       res.status(500).json({ error: "Failed to delete wine" });
     }
   });
@@ -102,9 +123,32 @@ export function registerRoutes(app: Express) {
   // Reviews
   app.post("/api/reviews", async (req, res) => {
     try {
-      const newReview = await db.insert(reviews).values(req.body).returning();
+      const { wineId, rating, notes, reviewDate } = req.body;
+      console.log('Received review data:', { wineId, rating, notes, reviewDate });
+
+      if (!wineId || typeof rating !== 'number' || rating < 0 || rating > 100) {
+        return res.status(400).json({
+          error: "Invalid review data. WineId is required and rating must be between 0 and 100."
+        });
+      }
+
+      // Ensure the wine exists before creating a review
+      const wine = await db.select().from(wines).where(eq(wines.id, wineId));
+      if (!wine || wine.length === 0) {
+        return res.status(404).json({ error: "Wine not found" });
+      }
+
+      const newReview = await db.insert(reviews).values({
+        wineId,
+        rating,
+        notes: notes || '',
+        reviewDate: reviewDate || new Date().toISOString(),
+      }).returning();
+
+      console.log('Review created successfully:', newReview[0]);
       res.json(newReview[0]);
     } catch (error) {
+      console.error('Review creation error:', error);
       res.status(500).json({ error: "Failed to create review" });
     }
   });
@@ -114,9 +158,9 @@ export function registerRoutes(app: Express) {
     try {
       const currentYear = new Date().getFullYear();
       const [
-        vintageDistribution, 
-        regionDistribution, 
-        varietyDistribution, 
+        vintageDistribution,
+        regionDistribution,
+        varietyDistribution,
         ratingsByVintage,
         ageAnalysis,
         binDistribution
@@ -246,7 +290,6 @@ export function registerRoutes(app: Express) {
         .groupBy(wines.region)
         .having(sql`count(${wines.id}) > 0`);
 
-      
 
       res.json({
         vintageDistribution,
