@@ -270,9 +270,8 @@ export default function WineTable() {
       </div>
 
       <Dialog open={isWineDialogOpen} onOpenChange={setIsWineDialogOpen}>
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-[600px]"
-          description={selectedWine ? "Update the details of your wine." : "Add a new wine to your collection."}
           aria-describedby="wine-form-description"
         >
           <DialogHeader>
@@ -297,13 +296,12 @@ export default function WineTable() {
               onSubmit={async (data, image) => {
                 try {
                   const formData = new FormData();
-                  // Remove createdAt from the data before sending
                   const { createdAt, ...wineData } = data;
                   formData.append("wine", JSON.stringify(wineData));
                   if (image) {
                     formData.append("image", image);
                   }
-                  
+
                   let response;
                   if (selectedWine) {
                     response = await fetch(`/api/wines/${selectedWine.id}`, {
@@ -316,12 +314,12 @@ export default function WineTable() {
                       body: formData,
                     });
                   }
-                  
+
                   if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.error || "Failed to save wine");
                   }
-                  
+
                   queryClient.invalidateQueries({ queryKey: ["wines"] });
                   setIsWineDialogOpen(false);
                   toast({

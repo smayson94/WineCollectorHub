@@ -18,6 +18,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -49,62 +50,69 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  registerRoutes(app);
-  const server = createServer(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  const startServer = (port: number) => {
-    return new Promise((resolve, reject) => {
-      server.listen(port, "0.0.0.0", () => {
-        const addressInfo = server.address();
-        const actualPort = typeof addressInfo === 'object' ? addressInfo?.port : port;
-        log(`Server listening on port ${actualPort}`);
-        resolve(actualPort);
-      }).on('error', (error: NodeJS.ErrnoException) => {
-        if (error.code === 'EADDRINUSE') {
-          log(`Port ${port} is in use, trying next available port...`);
-          server.close();
-          startServer(0).then(resolve).catch(reject);
-        } else {
-          reject(error);
-        }
-      });
-    });
-  };
-
   try {
+    log('Starting server initialization...');
+
+    // Register API routes first
+    registerRoutes(app);
+    const server = createServer(app);
+
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Error:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+
+    // Setup Vite or serve static files
+    if (process.env.NODE_ENV === "development") {
+      log('Setting up Vite middleware for development...');
+      await setupVite(app, server);
+      log('Vite middleware setup complete');
+    } else {
+      log('Setting up static file serving for production...');
+      serveStatic(app);
+    }
+
+    const startServer = (port: number) => {
+      return new Promise((resolve, reject) => {
+        server.listen(port, "0.0.0.0", () => {
+          const addressInfo = server.address();
+          const actualPort = typeof addressInfo === 'object' ? addressInfo?.port : port;
+          log(`Server listening on 0.0.0.0:${actualPort}`);
+          resolve(actualPort);
+        }).on('error', (error: NodeJS.ErrnoException) => {
+          if (error.code === 'EADDRINUSE') {
+            log(`Port ${port} is in use, trying next available port...`);
+            server.close();
+            startServer(port + 1).then(resolve).catch(reject);
+          } else {
+            console.error('Server error:', error);
+            reject(error);
+          }
+        });
+      });
+    };
+
     const PORT = Number(process.env.PORT) || 3001;
+    log(`Attempting to start server on port ${PORT}...`);
     await startServer(PORT);
+
+    // Handle graceful shutdown
+    const shutdown = () => {
+      log('Performing graceful shutdown...');
+      server.close(() => {
+        log('Server closed');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
-
-  // Handle graceful shutdown
-  const shutdown = () => {
-    log('Performing graceful shutdown...');
-    server.close(() => {
-      log('Server closed');
-      process.exit(0);
-    });
-  };
-
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
 })();

@@ -246,38 +246,7 @@ export function registerRoutes(app: Express) {
         .groupBy(wines.region)
         .having(sql`count(${wines.id}) > 0`);
 
-      // Calculate value analytics
-      const valueAnalytics = await db
-        .select({
-          totalValue: sql`sum(${wines.marketValue})::numeric(10,2)`,
-          avgBottleValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
-          valueByRegion: sql`json_object_agg(
-            ${wines.region}, 
-            avg(${wines.marketValue})::numeric(10,2)
-          )`,
-          priceRanges: sql`json_build_object(
-            'under_20', count(*) filter (where ${wines.marketValue} < 20),
-            '20_50', count(*) filter (where ${wines.marketValue} between 20 and 50),
-            '50_100', count(*) filter (where ${wines.marketValue} between 50 and 100),
-            'over_100', count(*) filter (where ${wines.marketValue} > 100)
-          )`
-        })
-        .from(wines)
-        .where(sql`${wines.marketValue} is not null`);
-
-      // Calculate regional performance metrics
-      const regionalPerformance = await db
-        .select({
-          region: wines.region,
-          avgRating: sql`avg(${reviews.rating})::numeric(10,2)`,
-          totalWines: sql`count(distinct ${wines.id})`,
-          avgValue: sql`avg(${wines.marketValue})::numeric(10,2)`,
-          topVarieties: sql`array_agg(distinct ${wines.variety}) filter (where ${wines.variety} is not null)`
-        })
-        .from(wines)
-        .leftJoin(reviews, eq(reviews.wineId, wines.id))
-        .groupBy(wines.region)
-        .having(sql`count(${wines.id}) > 0`);
+      
 
       res.json({
         vintageDistribution,
